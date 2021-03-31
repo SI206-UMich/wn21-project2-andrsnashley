@@ -1,3 +1,6 @@
+# Author: Ashley Anderson
+# By: Nina Yang, Anthony Ho
+
 from bs4 import BeautifulSoup
 import requests
 import re
@@ -92,14 +95,24 @@ def write_csv(data, filename):
     csvfile.close()
 
 
-# def extra_credit(filepath):
-#     return None
-#     """
-#     EXTRA CREDIT
+def extra_credit(filepath):
 
-#     Please see the instructions document for more information on how to complete this function.
-#     You do not have to write test cases for this function.
-#     """
+    infile = open(filepath, 'r', encoding='utf-8')
+    soup = BeautifulSoup(infile, 'html.parser')
+    infile.close()
+
+    regex = r"([A-Z][a-z][a-z]+\s+[A-Z][a-z]+)"
+
+    description = soup.find('div', id="description")
+    parts = description.find_all('span')
+    text = ""
+
+    for part in parts:
+        text += part.text
+
+    entities = re.findall(regex, text)
+    print(entities)
+
 
 class TestCases(unittest.TestCase):
 
@@ -227,7 +240,7 @@ class TestCases(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # print(extra_credit("extra_credit.htm"))
+    print(extra_credit("extra_credit.htm"))
     unittest.main(verbosity=2)
 
 
