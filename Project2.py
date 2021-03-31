@@ -10,7 +10,7 @@ def get_titles_from_search_results(filename):
 
     source_dir = os.path.dirname(__file__)
     full_path = os.path.join(source_dir, filename)
-    infile = open(full_path,'r', encoding='utf-8')
+    infile = open(full_path, 'r', encoding='utf-8')
     soup = BeautifulSoup(infile, 'html.parser')
     infile.close()
 
@@ -25,8 +25,8 @@ def get_titles_from_search_results(filename):
         author = row.find("a", class_="authorName")
         authorName = author.find("span", itemprop="name")
 
-        titles.append((bookTitle.text, authorName.text))
-
+        titles.append((bookTitle.text.strip(), authorName.text.strip()))
+        
     return titles
 
 
@@ -59,41 +59,38 @@ def get_book_summary(book_url):
     return (bookTitle.text.strip(), authorName.text.strip(), int(pageNum.text.strip().split(" ")[0]))
 
 
-# def summarize_best_books(filepath):
-#     return None
-#     """
-#     Write a function to get a list of categories, book title and URLs from the "BEST BOOKS OF 2020"
-#     page in "best_books_2020.htm". This function should create a BeautifulSoup object from a 
-#     filepath and return a list of (category, book title, URL) tuples.
+def summarize_best_books(filepath):
+
+    infile = open(filepath, 'r', encoding='utf-8')
+    soup = BeautifulSoup(infile, 'html.parser')
+    infile.close()
+
+    books = soup.find_all(class_="category clearFix")
+    categories = []
+
+    for book in books:
+
+        category = book.find(class_="category__copy").text.strip()
+        bookTitle = book.find("img", class_="category__winnerImage").get('alt', None)
+        link = book.find("a").get('href', None)
+
+        categories.append((category, bookTitle, link))
+        
+    return categories
+
+
+def write_csv(data, filename):
     
-#     For example, if the best book in category "Fiction" is "The Testaments (The Handmaid's Tale, #2)", with URL
-#     https://www.goodreads.com/choiceawards/best-fiction-books-2020, then you should append 
-#     ("Fiction", "The Testaments (The Handmaid's Tale, #2)", "https://www.goodreads.com/choiceawards/best-fiction-books-2020") 
-#     to your list of tuples.
-#     """
+    with open(filename, mode='w') as csvfile:
 
+        dataWriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        dataWriter.writerow(["Book title", "Author Name"])
+        
+        for line in data:
+            dataWriter.writerow([line[0], line[1]])
 
-# def write_csv(data, filename):
-#     return None
-#     """
-#     Write a function that takes in a list of tuples (called data, i.e. the
-#     one that is returned by get_titles_from_search_results()), writes the data to a 
-#     csv file, and saves it to the passed filename.
+    csvfile.close()
 
-#     The first row of the csv should contain "Book Title" and "Author Name", and
-#     respectively as column headers. For each tuple in data, write a new
-#     row to the csv, placing each element of the tuple in the correct column.
-
-#     When you are done your CSV file should look like this:
-
-#     Book title,Author Name
-#     Book1,Author1
-#     Book2,Author2
-#     Book3,Author3
-#     ......
-
-#     This function should not return anything.
-#     """
 
 # def extra_credit(filepath):
 #     return None
@@ -152,12 +149,13 @@ class TestCases(unittest.TestCase):
 
         # create a local variable – summaries – a list containing the results from get_book_summary()
         # for each URL in TestCases.search_urls (should be a list of tuples)
-        summaries = TestCases.search_urls
+        summaries = []
+        for x in TestCases.search_urls:
+            summaries.append(get_book_summary(x))
 
         # check that the number of book summaries is correct (10)
         self.assertEqual(len(summaries), 10)
-        for url in summaries:
-            item = get_book_summary(url)
+        for item in summaries:
 
             # check that each item in the list is a tuple
             self.assertEqual(type(item), tuple)
@@ -173,38 +171,56 @@ class TestCases(unittest.TestCase):
             self.assertEqual(type(item[2]), int)
 
         # check that the first book in the search has 337 pages
-        self.assertEqual(get_book_summary(summaries[0])[2], 337)
+        self.assertEqual(summaries[0][2], 337)
 
 
-#     def test_summarize_best_books(self):
-#         # call summarize_best_books and save it to a variable
+    def test_summarize_best_books(self):
 
-#         # check that we have the right number of best books (20)
+        # call summarize_best_books and save it to a variable
+        source_dir = os.path.dirname(__file__)
+        full_path = os.path.join(source_dir, "best_books_2020.htm")
+        bestBooks = summarize_best_books(full_path)
 
-#             # assert each item in the list of best books is a tuple
+        # check that we have the right number of best books (20)
+        self.assertEqual(len(bestBooks), 20)
+        for book in bestBooks:
 
-#             # check that each tuple has a length of 3
+            # assert each item in the list of best books is a tuple
+            self.assertEqual(type(book), tuple)
 
-#         # check that the first tuple is made up of the following 3 strings:'Fiction', "The Midnight Library", 'https://www.goodreads.com/choiceawards/best-fiction-books-2020'
+            # check that each tuple has a length of 3
+            self.assertEqual(len(book), 3)
 
-#         # check that the last tuple is made up of the following 3 strings: 'Picture Books', 'Antiracist Baby', 'https://www.goodreads.com/choiceawards/best-picture-books-2020'
+        # check that the first tuple is made up of the following 3 strings:'Fiction', "The Midnight Library", 'https://www.goodreads.com/choiceawards/best-fiction-books-2020'
+        self.assertEqual(bestBooks[0], ('Fiction', "The Midnight Library", 'https://www.goodreads.com/choiceawards/best-fiction-books-2020'))
 
+        # check that the last tuple is made up of the following 3 strings: 'Picture Books', 'Antiracist Baby', 'https://www.goodreads.com/choiceawards/best-picture-books-2020'
+        self.assertEqual(bestBooks[len(bestBooks)-1], ('Picture Books', 'Antiracist Baby', 'https://www.goodreads.com/choiceawards/best-picture-books-2020'))
 
-#     def test_write_csv(self):
-#         # call get_titles_from_search_results on search_results.htm and save the result to a variable
+    def test_write_csv(self):
 
-#         # call write csv on the variable you saved and 'test.csv'
+        # call get_titles_from_search_results on search_results.htm and save the result to a variable
+        titles = get_titles_from_search_results("search_results.htm")
 
-#         # read in the csv that you wrote (create a variable csv_lines - a list containing all the lines in the csv you just wrote to above)
+        # call write csv on the variable you saved and 'test.csv'
+        write_csv(titles, "test.csv")
 
+        # read in the csv that you wrote (create a variable csv_lines - a list containing all the lines in the csv you just wrote to above)
+        f = open('test.csv')
+        csv_reader = csv.reader(f, delimiter=',')
+        csv_lines = [r for r in csv_reader]
 
-#         # check that there are 21 lines in the csv
+        # check that there are 21 lines in the csv
+        self.assertEqual(len(csv_lines), 21)
 
-#         # check that the header row is correct
+        # check that the header row is correct
+        self.assertEqual(csv_lines[0], "Book title,Author Name")
 
-#         # check that the next row is 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'
+        # check that the next row is 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'
+        self.assertEqual(csv_lines[1], 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling')
 
-#         # check that the last row is 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling'
+        # check that the last row is 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling'
+        self.assertEqual(csv_lines[len(csv_lines)-1], 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling')
 
 
 
